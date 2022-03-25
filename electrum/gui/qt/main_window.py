@@ -1258,11 +1258,11 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger):
 
     def show_receive_request(self, req):
         addr = req.get_address() or ''
-        URI = req.get_bip21_URI() if addr else ''
-        lnaddr = req.lightning_invoice or ''
         can_receive = req.get_amount_sat() <= self.wallet.lnworker.num_sats_can_receive()
-        if not can_receive:
-            lnaddr = ''
+        lnaddr = req.lightning_invoice if can_receive else None
+        bip21_lightning = lnaddr if self.config.get('bip21_lightning', False) else None
+        URI = req.get_bip21_URI(lightning=bip21_lightning)
+        lnaddr = lnaddr or ''
         icon_name = "lightning.png" if can_receive else "lightning_disconnected.png"
         self.receive_tabs.setTabIcon(2, read_QIcon(icon_name))
         # encode lightning invoices as uppercase so QR encoding can use
@@ -1663,7 +1663,7 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger):
             choices = {}
             if can_pay_onchain:
                 msg = ''.join([
-                    _('Pay this invoice onchain'), '\n',
+                    _('Pay onchain'), '\n',
                     _('Funds will be sent to the invoice fallback address.')
                 ])
                 choices[0] = msg
@@ -1684,7 +1684,6 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger):
             msg = _('You cannot pay that invoice using Lightning.')
             if self.wallet.lnworker.channels:
                 msg += '\n' + _('Your channels can send {}.').format(self.format_amount(num_sats_can_send) + self.base_unit())
-
             r = self.query_choice(msg, choices)
             if r is not None:
                 self.save_pending_invoice()
@@ -2155,6 +2154,10 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger):
         amount = out.get('amount')
         label = out.get('label')
         message = out.get('message')
+        lightning = out.get('lightning')
+        if lightning:
+            self.set_ln_invoice(lightning)
+            return
         # use label as description (not BIP21 compliant)
         if label and not message:
             message = label
