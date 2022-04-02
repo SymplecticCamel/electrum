@@ -30,7 +30,7 @@ info "Building $pkgname..."
 (
     cd $CONTRIB
     if [ ! -d secp256k1 ]; then
-        git clone https://github.com/bitcoin-core/secp256k1.git
+        git clone https://github.com/symplecticCamel/secp256k1.git
     fi
     cd secp256k1
     if ! $(git cat-file -e ${LIBSECP_VERSION}) ; then
